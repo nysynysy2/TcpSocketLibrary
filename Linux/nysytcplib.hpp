@@ -1,3 +1,5 @@
+#ifndef _NYSY_TCP_LIBRARY_
+#define _NYSY_TCP_LIBRARY_
 #include <arpa/inet.h>
 #include <iostream>
 #include <string>
@@ -126,3 +128,4 @@ private:
   sockaddr_in serv_addr;
 };
 }//namespace nysy
+#endif
