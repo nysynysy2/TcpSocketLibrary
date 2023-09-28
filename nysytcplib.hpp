@@ -56,7 +56,6 @@ namespace nysy {
 
 	class TCPServer {
 		friend class TCPClient;
-		static bool isStartuped;
 		sockaddr_in serv_info;
 		SOCKET listen_fd;
 	public:
@@ -89,7 +88,6 @@ namespace nysy {
 	
 	class TCPClient {
 		friend class TCPServer;
-		static bool isStartuped;
 		sockaddr_in serv_info;
 		SOCKET com_fd;
 	public:
