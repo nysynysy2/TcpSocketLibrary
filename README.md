@@ -1,7 +1,7 @@
 # TcpSocketLibrary
 
 
-A TCP Socket Library(With a threadpool)
+A TCP Socket Library
 
 class:
 
