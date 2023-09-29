@@ -1,7 +1,7 @@
 # TcpSocketLibrary
 
 
-A Header-only TCP Socket Library
+A Header-only C++ TCP Socket Library
 
 class:
 
