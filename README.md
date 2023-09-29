@@ -6,9 +6,10 @@ A TCP Socket Library(With a threadpool)
 class:
 
 ```cpp
-TCPClient
-TCPServer
-Connection
+class TCPClient;
+class TCPServer;
+class Connection;
+enum class ConnectionStatus{Success = 0, SystenError, InvalidError, Logout};
 ```
 
 functions:
