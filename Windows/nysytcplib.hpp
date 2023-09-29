@@ -19,7 +19,7 @@ namespace nysy {
 
 		SOCKET com_fd;
 	public:
-		ConnectionStatus receive(std::string& data) {
+		ConnectionStatus receive_once(std::string& data) {
 			char buf[BUF_SIZE]{ 0 };
 			data = "";
 			auto recv_len = ::recv(com_fd,buf,BUF_SIZE,0);
@@ -41,6 +41,18 @@ namespace nysy {
 				auto ioctl_res = ::ioctlsocket(com_fd, FIONBIO, &mode);
 				if (ioctl_res == SOCKET_ERROR)return ConnectionStatus::SystemError;
 			}
+			return ConnectionStatus::Success;
+		}
+		ConnectionStatus receive_all(std::string& data) {
+			char buf[BUF_SIZE];
+			data = "";
+			int recv_len = 0;
+			do {
+				recv_len = ::recv(com_fd, buf, BUF_SIZE, 0);
+				if (recv_len == 0)break;
+				if (recv_len == SOCKET_ERROR)return ConnectionStatus::SystemError;
+				data.append(buf, recv_len);
+			} while (recv_len > 0);
 			return ConnectionStatus::Success;
 		}
 		ConnectionStatus send(const std::string& data) {
