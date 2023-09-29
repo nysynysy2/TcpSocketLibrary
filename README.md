@@ -15,8 +15,8 @@ enum class ConnectionStatus{Success = 0, SystenError, InvalidError, Logout};
 functions:
 
 ```cpp
-TCPServer::init(std::string ip,unsigned short port);
-TCPClient the same
+ConnectionStatus TCPServer::init(unsigned short port = 80,std::string ip="0.0.0.0");
+ConnectionStatus TCPClient::init(unsigned short port,std::string ip);
 
 ConnectionStatus TCPServer::listen(int back_log);
 std::tuple<ConnectionStatus,Connection,sockaddr_in> TCPServer::accept();
