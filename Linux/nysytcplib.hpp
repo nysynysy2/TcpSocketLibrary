@@ -4,6 +4,7 @@
 #include <cassert>
 #include <unistd.h>
 #include <tuple>
+#include <cstring>
 namespace nysy
 {
     class TCPServer;
@@ -16,7 +17,7 @@ namespace nysy
         friend class TCPServer;
         friend class TCPClient;
 
-        static const int BUF_SZIE = 1024;
+        static const int BUF_SIZE = 1024;
     public:
         Connection() :com_fd() {}
         ConnectionStatus send(const std::string& data)
@@ -34,14 +35,14 @@ namespace nysy
         ConnectionStatus receive_once(std::string& data)
         {
             data = "";
-            char buf[BUF_SZIE]{ 0 };
+            char buf[BUF_SIZE]{ 0 };
             int recv_len = ::recv(com_fd, buf, BUF_SIZE, 0);
             if (recv_len == 0)return ConnectionStatus::Logout;
             else if (recv_len == -1)return ConnectionStatus::SystemError;
             data.append(buf, recv_len);
             do
             {
-                recv_len = recv(com_fd, buf, BUF_SZIE, MSG_DONTWAIT);
+                recv_len = recv(com_fd, buf, BUF_SIZE, MSG_DONTWAIT);
                 if (recv_len > 0)data.append(buf, recv_len);
                 //else if(recv_len == -1)return ConnectionStatus::Error;
             } while (recv_len > 0);
@@ -51,7 +52,7 @@ namespace nysy
         {
             data = "";
             int recv_len = 0;
-            char buf[BUF_SZIE]{ 0 };
+            char buf[BUF_SIZE]{ 0 };
             do
             {
                 recv_len = ::recv(com_fd, buf, BUF_SIZE, 0);
