@@ -72,7 +72,7 @@ namespace nysy {
 		SOCKET listen_fd;
 	public:
 		TCPServer() :serv_info(), listen_fd() {}
-		ConnectionStatus init(std::string ip_addr,unsigned short port) {
+		ConnectionStatus init(std::string ip_addr = "0.0.0.0",unsigned short port = 80) {
 			listen_fd = ::socket(AF_INET,SOCK_STREAM,0);
 			if (listen_fd == INVALID_SOCKET)return ConnectionStatus::SystemError;
 			serv_info.sin_family = AF_INET;
