@@ -71,7 +71,7 @@ namespace nysy
     public:
         TCPServer() :serv_addr(), listen_fd() {};
 
-        ConnectionStatus init(std::string ip_addr,unsigned short port)
+        ConnectionStatus init(std::string ip_addr = "0.0.0.0",unsigned short port = 80)
         {
             listen_fd = socket(AF_INET, SOCK_STREAM, 0);
             if (listen_fd == -1)return ConnectionStatus::SystemError;  //return if failed to listen
