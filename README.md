@@ -18,7 +18,7 @@ functions:
 TCPServer::init(std::string ip,unsigned short port);
 TCPClient the same
 
-TCPServer::listen(int back_log);
+ConnectionStatus TCPServer::listen(int back_log);
 std::tuple<ConnectionStatus,Connection,sockaddr_in> TCPServer::accept();
 
 std::pair<ConnectionStatus,Connection> TCPClient::connect();
