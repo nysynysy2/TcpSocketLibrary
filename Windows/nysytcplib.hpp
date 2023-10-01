@@ -17,6 +17,7 @@ namespace nysy {
 		friend class TCPServer;
 		friend class TCPClient;
 
+		bool is_closed;
 		SOCKET com_fd;
 	public:
 		ConnectionStatus receive_once(std::string& data) {
@@ -64,6 +65,12 @@ namespace nysy {
 				sent_len += sent;
 			}
 		}
+		void close_socket() {
+			if(!is_closed) {
+				::closesocket(com_fd);
+				is_closed = true;
+			}
+		}
 	};
 
 	class TCPServer {
@@ -75,6 +82,8 @@ namespace nysy {
 		ConnectionStatus init(unsigned short port = 80, std::string ip_addr = "0.0.0.0") {
 			listen_fd = ::socket(AF_INET,SOCK_STREAM,0);
 			if (listen_fd == INVALID_SOCKET)return ConnectionStatus::SystemError;
+			int on = 1;
+			if(::setsocketopt(listen_fd,SOL_SOCKET,SO_REUSEADDR,&on) == SOCKET_ERROR)return ConnectionStatus::SystemError; 
 			serv_info.sin_family = AF_INET;
 			serv_info.sin_port = ::htons(port);
 			if (::inet_pton(AF_INET, ip_addr.c_str(), &(serv_info.sin_addr)) != 1)return ConnectionStatus::InvalidError;
@@ -121,7 +130,7 @@ namespace nysy {
 			return std::make_pair(stat,serv_connection);
 		}
 
-		~TCPClient() { ::closesocket(com_fd); }
+		/*~TCPClient() { ::closesocket(com_fd); }*/
 	};
 }//namespace nysy
 #endif
