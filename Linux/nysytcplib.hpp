@@ -62,7 +62,16 @@ namespace nysy
             } while (recv_len > 0);
             return ConnectionStatus::Success;
         }
+    void close_socket()
+    {
+        if(!is_closed)
+        {
+            ::close(com_fd);
+            is_closed = true;
+        }
+    }
     private:
+        bool is_closed;
         int com_fd;
     };
 
@@ -74,7 +83,9 @@ namespace nysy
         ConnectionStatus init(unsigned short port = 80,std::string ip_addr = "0.0.0.0")
         {
             listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-            if (listen_fd == -1)return ConnectionStatus::SystemError;  //return if failed to listen
+            if (listen_fd == -1)return ConnectionStatus::SystemError;  //return if failed to init
+            int on = 1;
+            if(::setsockopt(listen_fd,SOL_SOCKET,SO_REUSEADDR,&on) == -1)return ConnectionStatus::SystemError;
             serv_addr.sin_port = ::htons(port); //set socket's port
             serv_addr.sin_family = AF_INET;
             if (::inet_pton(AF_INET, ip_addr.c_str(), &(serv_addr.sin_addr)) != 1)return ConnectionStatus::InvalidError;
@@ -133,10 +144,10 @@ namespace nysy
             return std::make_pair(stat, server_connection);
         }
 
-        ~TCPClient()
+        /*~TCPClient()
         {
             ::close(com_fd);
-        }
+        }*/
     private:
         int com_fd;
         sockaddr_in serv_addr;
