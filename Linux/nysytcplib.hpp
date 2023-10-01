@@ -1,3 +1,5 @@
+#ifndef _NYSY_TCP_LIBRARY_
+#define _NYSY_TCP_LIBRARY_
 #include <arpa/inet.h>
 #include <iostream>
 #include <string>
@@ -7,6 +9,8 @@
 #include <cstring>
 namespace nysy
 {
+    static const int BUF_SIZE = 1024;
+
     class TCPServer;
     class TCPClient;
 
@@ -17,7 +21,8 @@ namespace nysy
         friend class TCPServer;
         friend class TCPClient;
 
-        static const int BUF_SIZE = 1024;
+        bool is_closed;
+        int com_fd;
     public:
         Connection() :com_fd() {}
         ConnectionStatus send(const std::string& data)
@@ -62,17 +67,14 @@ namespace nysy
             } while (recv_len > 0);
             return ConnectionStatus::Success;
         }
-    void close_socket()
-    {
-        if(!is_closed)
+        void close_socket()
         {
-            ::close(com_fd);
-            is_closed = true;
+            if(!is_closed)
+            {
+                ::close(com_fd);
+                is_closed = true;
+            }
         }
-    }
-    private:
-        bool is_closed;
-        int com_fd;
     };
 
     class TCPServer
@@ -153,3 +155,4 @@ namespace nysy
         sockaddr_in serv_addr;
     };
 }//namespace nysy
+#endif
