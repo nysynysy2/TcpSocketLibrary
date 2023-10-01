@@ -65,6 +65,7 @@ namespace nysy {
 				if (sent == SOCKET_ERROR)return ConnectionStatus::SystemError;
 				sent_len += sent;
 			}
+			return ConnectionStatus::Success;
 		}
 		void close_socket() {
 			if (!is_closed) {
