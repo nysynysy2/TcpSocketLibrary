@@ -25,18 +25,6 @@ namespace nysy
         int com_fd;
     public:
         Connection() :com_fd() {}
-        ConnectionStatus send(const std::string& data)
-        {
-            int data_length = data.size();
-            int sent_length = 0;
-            while (sent_length < data_length)
-            {
-                auto res = ::send(com_fd, data.c_str() + sent_length, data_length - sent_length, 0);
-                if (res == -1)return ConnectionStatus::SystemError;
-                else sent_length += res;
-            }
-            return ConnectionStatus::Success;
-        }
         ConnectionStatus receive_once(std::string& data)
         {
             data = "";
@@ -65,6 +53,18 @@ namespace nysy
                 if (recv_len == -1)return ConnectionStatus::SystemError;
                 data.append(buf, recv_len);
             } while (recv_len > 0);
+            return ConnectionStatus::Success;
+        }
+        ConnectionStatus send(const std::string& data)
+        {
+            int data_length = data.size();
+            int sent_length = 0;
+            while (sent_length < data_length)
+            {
+                auto res = ::send(com_fd, data.c_str() + sent_length, data_length - sent_length, 0);
+                if (res == -1)return ConnectionStatus::SystemError;
+                else sent_length += res;
+            }
             return ConnectionStatus::Success;
         }
         void close_socket()
