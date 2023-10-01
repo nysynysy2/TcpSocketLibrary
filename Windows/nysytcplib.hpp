@@ -20,6 +20,7 @@ namespace nysy {
 		bool is_closed;
 		SOCKET com_fd;
 	public:
+		Connection() :com_fd(), is_closed(false) {}
 		ConnectionStatus receive_once(std::string& data) {
 			char buf[BUF_SIZE]{ 0 };
 			data = "";
