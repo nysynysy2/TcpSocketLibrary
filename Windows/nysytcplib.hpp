@@ -83,7 +83,7 @@ namespace nysy {
 			listen_fd = ::socket(AF_INET,SOCK_STREAM,0);
 			if (listen_fd == INVALID_SOCKET)return ConnectionStatus::SystemError;
 			int on = 1;
-			if(::setsocketopt(listen_fd,SOL_SOCKET,SO_REUSEADDR,&on) == SOCKET_ERROR)return ConnectionStatus::SystemError; 
+			if(::setsockopt(listen_fd,SOL_SOCKET,SO_REUSEADDR,&on) == SOCKET_ERROR)return ConnectionStatus::SystemError; 
 			serv_info.sin_family = AF_INET;
 			serv_info.sin_port = ::htons(port);
 			if (::inet_pton(AF_INET, ip_addr.c_str(), &(serv_info.sin_addr)) != 1)return ConnectionStatus::InvalidError;
