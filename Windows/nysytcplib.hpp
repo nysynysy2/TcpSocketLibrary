@@ -11,7 +11,7 @@ namespace nysy {
 	class TCPServer;
 	class TCPClient;
 
-	enum class ConnectionStatus {Success = 0, SystemError, InvalidError, Logout};
+	enum class ConnectionStatus { Success = 0, SystemError, InvalidError, Logout };
 
 	class Connection {
 		friend class TCPServer;
@@ -23,19 +23,19 @@ namespace nysy {
 		ConnectionStatus receive_once(std::string& data) {
 			char buf[BUF_SIZE]{ 0 };
 			data = "";
-			auto recv_len = ::recv(com_fd,buf,BUF_SIZE,0);
+			auto recv_len = ::recv(com_fd, buf, BUF_SIZE, 0);
 			if (recv_len == SOCKET_ERROR)return ConnectionStatus::SystemError;
 			if (recv_len == 0)return ConnectionStatus::Logout;
-			data.append(buf,recv_len);
+			data.append(buf, recv_len);
 			unsigned long mode = 1;
 			bool is_non_blocking = false;
 			while (recv_len) {
-				auto ioctl_res = ::ioctlsocket(com_fd,FIONBIO,&mode);
+				auto ioctl_res = ::ioctlsocket(com_fd, FIONBIO, &mode);
 				if (ioctl_res == SOCKET_ERROR)return ConnectionStatus::SystemError;
 				is_non_blocking = true;
 				recv_len = ::recv(com_fd, buf, BUF_SIZE, 0);
 				if (recv_len <= 0)break;
-				data.append(buf,recv_len);
+				data.append(buf, recv_len);
 			}
 			mode = 0;
 			if (is_non_blocking) {
@@ -66,7 +66,7 @@ namespace nysy {
 			}
 		}
 		void close_socket() {
-			if(!is_closed) {
+			if (!is_closed) {
 				::closesocket(com_fd);
 				is_closed = true;
 			}
@@ -80,10 +80,10 @@ namespace nysy {
 	public:
 		TCPServer() :serv_info(), listen_fd() {}
 		ConnectionStatus init(unsigned short port = 80, std::string ip_addr = "0.0.0.0") {
-			listen_fd = ::socket(AF_INET,SOCK_STREAM,0);
+			listen_fd = ::socket(AF_INET, SOCK_STREAM, 0);
 			if (listen_fd == INVALID_SOCKET)return ConnectionStatus::SystemError;
 			int on = 1;
-			if(::setsockopt(listen_fd,SOL_SOCKET,SO_REUSEADDR,&on) == SOCKET_ERROR)return ConnectionStatus::SystemError; 
+			if (::setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&on), sizeof(on)) == SOCKET_ERROR)return ConnectionStatus::SystemError;
 			serv_info.sin_family = AF_INET;
 			serv_info.sin_port = ::htons(port);
 			if (::inet_pton(AF_INET, ip_addr.c_str(), &(serv_info.sin_addr)) != 1)return ConnectionStatus::InvalidError;
@@ -106,14 +106,14 @@ namespace nysy {
 
 		~TCPServer() { ::closesocket(listen_fd); }
 	};
-	
+
 	class TCPClient {
 		friend class TCPServer;
 		sockaddr_in serv_info;
 		SOCKET com_fd;
 	public:
 		TCPClient() :serv_info(), com_fd() {}
-		ConnectionStatus init(unsigned short port,std::string ip_addr) {
+		ConnectionStatus init(unsigned short port, std::string ip_addr) {
 			com_fd = ::socket(AF_INET, SOCK_STREAM, 0);
 			if (com_fd == INVALID_SOCKET)return ConnectionStatus::SystemError;
 			serv_info.sin_family = AF_INET;
@@ -127,7 +127,7 @@ namespace nysy {
 			auto connect_res = ::connect(com_fd, reinterpret_cast<const sockaddr*>(&serv_info), sizeof serv_info);
 			if (connect_res == SOCKET_ERROR)stat = ConnectionStatus::SystemError;
 			serv_connection.com_fd = com_fd;
-			return std::make_pair(stat,serv_connection);
+			return std::make_pair(stat, serv_connection);
 		}
 
 		/*~TCPClient() { ::closesocket(com_fd); }*/
