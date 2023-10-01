@@ -24,7 +24,7 @@ namespace nysy
         bool is_closed;
         int com_fd;
     public:
-        Connection() :com_fd() {}
+        Connection() :com_fd(), is_closed(false) {}
         ConnectionStatus receive_once(std::string& data)
         {
             data = "";
