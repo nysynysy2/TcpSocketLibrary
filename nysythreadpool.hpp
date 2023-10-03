@@ -87,7 +87,7 @@ namespace nysy {
             }
         }
         ~ThreadPool() {
-            stop_and_detach();
+            stop_and_join();
         }
     private:
         void exec() {
