@@ -48,14 +48,14 @@ namespace nysy {
         size_t get_alive_thread_count()const { return alive_thread_count; }
         bool is_adjust_enabled()const { return adjust_enabled; }
         bool is_stopped()const { return stopped; }
-        template<class Fn, class... Args> auto addTask(Fn func, Args&&... args) {
+        template<class Fn, class... Args> auto add_task(Fn func, Args&&... args) {
             auto uniqueFuture = std::async(std::launch::deferred, func, std::forward<Args>(args)...);
             auto sharedFuture = uniqueFuture.share();
             cache.emplace_back([sharedFuture]() {sharedFuture.wait(); });
             add_task_cv.notify_one();
             return sharedFuture;
         }
-        template<class Fn, class... Args> auto addTask(Fn func, Args&&... args, size_t delay_ms) {
+        template<class Fn, class... Args> auto add_task_delay(size_t delay_ms, Fn func, Args&&... args) {
             auto uniqueFuture = std::async(std::launch::deferred, func, std::forward<Args>(args)...);
             auto sharedFuture = uniqueFuture.share();
             cache.emplace_back([sharedFuture, delay_ms]() {std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms)); sharedFuture.wait(); });
