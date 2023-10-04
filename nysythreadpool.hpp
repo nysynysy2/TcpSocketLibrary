@@ -26,7 +26,7 @@ namespace nysy {
         std::atomic<size_t> working_thread_count = 0, alive_thread_count = 0, kill_thread_count = 0, max_id = 0;
         size_t adjust_intervals = 0;
     public:
-        ThreadPool(size_t thread_count = std::thread::hardware_concurrency(), bool adjust_enabled = true, size_t max_thread = 100, size_t min_thread = 1, size_t adjust_intervals = 3000)
+        ThreadPool(size_t thread_count = std::thread::hardware_concurrency(), bool adjust_enabled = true, size_t max_thread = 100, size_t min_thread = 1, size_t adjust_intervals = 1000)
             :adjust_intervals(adjust_intervals), max_thread_count(max_thread), min_thread_count(min_thread), adjust_enabled(adjust_enabled) {
             if (adjust_enabled) {
                 assert(("Invalid Thread Count", max_thread > 0 && min_thread > 0 && max_thread >= min_thread));
