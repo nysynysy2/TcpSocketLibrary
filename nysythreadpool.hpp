@@ -9,27 +9,34 @@
 #include <functional>
 #include <mutex>
 #include <chrono>
+#include <vector>
 #include <cassert>
+#include <unordered_map>
+#include <algorithm>
 namespace nysy {
     class ThreadPool {
-        std::list<std::thread> threads;
+        std::unordered_map<size_t,std::thread> threads;
+        std::list<size_t> kill_ids;
         std::list<std::packaged_task<void()>> cache;
         bool stopped = false, adjust_enabled = true;
         std::condition_variable add_task_cv, end_task_cv;
         std::mutex pool_lock;
         size_t max_thread_count = 0, min_thread_count = 0;
-        std::atomic<size_t> working_thread_count = 0, alive_thread_count = 0, kill_thread_count = 0;
+        std::atomic<size_t> working_thread_count = 0, alive_thread_count = 0, kill_thread_count = 0, max_id = 0;
         size_t manage_duration_ms = 0;
     public:
         ThreadPool(size_t thread_count = std::thread::hardware_concurrency(), bool adjust_enabled = true, size_t max_thread = 100, size_t min_thread = 1, size_t manage_duration_ms = 3000)
             :manage_duration_ms(manage_duration_ms), max_thread_count(max_thread), min_thread_count(min_thread), adjust_enabled(adjust_enabled) {
             if (adjust_enabled) {
                 assert(("Invalid Thread Count", max_thread > 0 && min_thread > 0 && max_thread >= min_thread));
-                threads.emplace_back(&ThreadPool::manage, this);
+                std::thread n_thread(&ThreadPool::manage, this);
+                threads.emplace(max_id++, std::move(n_thread));
             }
-            assert(("Invalid Thread Count",thread_count > 0));
-            for (size_t i = 0; i < thread_count; ++i) {
-                threads.emplace_back(&ThreadPool::exec, this);
+            assert(("Invalid Thread Count",thread_count > 0 && thread_count >= min_thread));
+            for (size_t i = 1; i <= thread_count; ++i) {
+                size_t id = max_id++;
+                std::thread n_thread(&ThreadPool::exec, this, id);
+                threads.emplace(id, std::move(n_thread));
                 alive_thread_count++;
             }
         }
@@ -64,24 +71,28 @@ namespace nysy {
         }
         void wait() {
             if (!stopped) {
-                std::unique_lock locker(pool_lock);
+                std::unique_lock<std::mutex> locker{pool_lock};
                 end_task_cv.wait(locker, [=]() {return cache.empty() && working_thread_count == 0; });
             }
         }
         void stop_and_join() {
+            std::unique_lock<std::mutex> locker{pool_lock};
             if (!stopped) {
                 stopped = true;
+                locker.unlock();
                 add_task_cv.notify_all();
-                for (auto& th : threads) {
+                for (auto& [k, th] : threads) {
                     th.join();
                 }
             }
         }
         void stop_and_detach() {
+            std::unique_lock<std::mutex> locker{pool_lock};
             if (!stopped) {
                 stopped = true;
+                locker.unlock();
                 add_task_cv.notify_all();
-                for (auto& th : threads) {
+                for (auto& [k, th] : threads) {
                     th.detach();
                 }
             }
@@ -90,12 +101,18 @@ namespace nysy {
             stop_and_join();
         }
     private:
-        void exec() {
+        void exec(size_t id) {
             while (!stopped) {
                 std::unique_lock<std::mutex> locker(pool_lock);
-                add_task_cv.wait(locker, [=]() {return !(this->cache.empty()) || this->stopped; });
+                add_task_cv.wait(locker, [=]() {return !(this->cache.empty()) || this->stopped || kill_thread_count > 0; });
                 if (stopped)return;
-                std::packaged_task<void()> task = std::move(cache.front());
+                if (kill_thread_count > 0) {
+                    alive_thread_count--;
+                    kill_thread_count--;
+                    kill_ids.push_back(id);
+                    return;
+                }
+                std::packaged_task<void()> task{std::move(cache.front())};
                 cache.pop_front();
                 locker.unlock();
                 ++working_thread_count;
@@ -109,6 +126,12 @@ namespace nysy {
                 std::this_thread::sleep_for(std::chrono::milliseconds(manage_duration_ms));
                 if (stopped || !adjust_enabled)return;
                 std::unique_lock<std::mutex> locker{pool_lock};
+                while (!kill_ids.empty()) {
+                    size_t id = kill_ids.front();
+                    threads.at(id).join();
+                    threads.erase(id);
+                    kill_ids.pop_front();
+                }
                 if (cache.empty() && alive_thread_count > working_thread_count * 2 && alive_thread_count > min_thread_count) {
                     kill_thread_count.store(std::min<size_t>(alive_thread_count - working_thread_count, alive_thread_count - min_thread_count));
                     locker.unlock();
@@ -118,7 +141,9 @@ namespace nysy {
                     size_t add_count = std::min<size_t>(max_thread_count - alive_thread_count, cache.size() - alive_thread_count);
                     locker.unlock();
                     for (size_t i = 0; i < add_count; ++i) {
-                        threads.emplace_back(&ThreadPool::exec, this);
+                        size_t id = max_id++;
+                        std::thread n_thread(&ThreadPool::exec, this, id);
+                        threads.emplace(id,std::move(n_thread));
                         alive_thread_count++;
                     }
                 }
