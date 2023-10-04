@@ -13,11 +13,12 @@
 #include <cassert>
 #include <unordered_map>
 #include <algorithm>
+#include <deque>
 namespace nysy {
     class ThreadPool {
         std::unordered_map<size_t,std::thread> threads;
         std::list<size_t> kill_ids;
-        std::list<std::packaged_task<void()>> cache;
+        std::deque<std::packaged_task<void()>> cache;
         bool stopped = false, adjust_enabled = true;
         std::condition_variable add_task_cv, end_task_cv;
         std::mutex pool_lock;
@@ -57,17 +58,23 @@ namespace nysy {
         size_t get_adjust_intervals()const { return adjust_intervals; }
         bool is_adjust_enabled()const { return adjust_enabled; }
         bool is_stopped()const { return stopped; }
-        template<class Fn, class... Args> std::shared_future<typename std::invoke_result<Fn, Args...>::type> add_task(Fn func, Args&&... args) {
+        template<class Fn, class... Args> auto add_task(Fn func, Args&&... args) {
             auto uniqueFuture = std::async(std::launch::deferred, func, std::forward<Args>(args)...);
-            auto sharedFuture = uniqueFuture.share();
-            cache.emplace_back([sharedFuture]() {sharedFuture.wait(); });
+            auto sharedFuture{uniqueFuture.share()};
+            {
+                std::lock_guard<std::mutex> locker{pool_lock};
+                cache.emplace_back([sharedFuture]() {sharedFuture.wait(); });
+            }
             add_task_cv.notify_one();
             return sharedFuture;
         }
-        template<class Fn, class... Args> std::shared_future<typename std::invoke_result<Fn, Args...>::type> add_task_delay(size_t delay_ms, Fn func, Args&&... args) {
+        template<class Fn, class... Args> auto add_task_delay(size_t delay_ms, Fn func, Args&&... args) {
             auto uniqueFuture = std::async(std::launch::deferred, func, std::forward<Args>(args)...);
-            auto sharedFuture = uniqueFuture.share();
-            cache.emplace_back([sharedFuture, delay_ms]() {std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms)); sharedFuture.wait(); });
+            auto sharedFuture{uniqueFuture.share()};
+            {
+                std::lock_guard<std::mutex> locker{pool_lock};
+                cache.emplace_back([sharedFuture, delay_ms]() {std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms)); sharedFuture.wait(); });
+            }
             add_task_cv.notify_one();
             return sharedFuture;
         }
@@ -154,4 +161,4 @@ namespace nysy {
         }
     };
 }//namespace nysy
-#endif
+#endif//_NYSY_THREAD_POOL_
