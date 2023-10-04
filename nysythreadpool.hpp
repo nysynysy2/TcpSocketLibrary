@@ -13,12 +13,11 @@
 #include <cassert>
 #include <unordered_map>
 #include <algorithm>
-#include <deque>
 namespace nysy {
     class ThreadPool {
         std::unordered_map<size_t,std::thread> threads;
         std::list<size_t> kill_ids;
-        std::deque<std::packaged_task<void()>> cache;
+        std::list<std::packaged_task<void()>> cache;
         bool stopped = false, adjust_enabled = true;
         std::condition_variable add_task_cv, end_task_cv;
         std::mutex pool_lock;
@@ -91,7 +90,8 @@ namespace nysy {
                 locker.unlock();
                 add_task_cv.notify_all();
                 for (auto& [k, th] : threads) {
-                    th.join();
+                    if (k == 0)th.detach();
+                    else th.join();
                 }
             }
         }
