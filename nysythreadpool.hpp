@@ -23,10 +23,10 @@ namespace nysy {
         std::mutex pool_lock;
         size_t max_thread_count = 0, min_thread_count = 0;
         std::atomic<size_t> working_thread_count = 0, alive_thread_count = 0, kill_thread_count = 0, max_id = 0;
-        size_t manage_duration_ms = 0;
+        size_t adjust_intervals = 0;
     public:
-        ThreadPool(size_t thread_count = std::thread::hardware_concurrency(), bool adjust_enabled = true, size_t max_thread = 100, size_t min_thread = 1, size_t manage_duration_ms = 3000)
-            :manage_duration_ms(manage_duration_ms), max_thread_count(max_thread), min_thread_count(min_thread), adjust_enabled(adjust_enabled) {
+        ThreadPool(size_t thread_count = std::thread::hardware_concurrency(), bool adjust_enabled = true, size_t max_thread = 100, size_t min_thread = 1, size_t adjust_intervals = 3000)
+            :adjust_intervals(adjust_intervals), max_thread_count(max_thread), min_thread_count(min_thread), adjust_enabled(adjust_enabled) {
             if (adjust_enabled) {
                 assert(("Invalid Thread Count", max_thread > 0 && min_thread > 0 && max_thread >= min_thread));
                 std::thread n_thread(&ThreadPool::manage, this);
@@ -49,20 +49,22 @@ namespace nysy {
             min_thread_count = val;
         }
         void set_adjust_enabled(bool enabled) { adjust_enabled = enabled; }
+        void set_adjust_intervals(size_t intervals_ms) { adjust_intervals = intervals_ms; }
         size_t get_max_thread_count()const { return max_thread_count; }
         size_t get_min_thread_count()const { return min_thread_count; }
         size_t get_working_thread_count()const { return working_thread_count; }
         size_t get_alive_thread_count()const { return alive_thread_count; }
+        size_t get_adjust_intervals()const { return adjust_intervals; }
         bool is_adjust_enabled()const { return adjust_enabled; }
         bool is_stopped()const { return stopped; }
-        template<class Fn, class... Args> auto add_task(Fn func, Args&&... args) {
+        template<class Fn, class... Args> std::shared_future<typename std::invoke_result<Fn, Args...>::type> add_task(Fn func, Args&&... args) {
             auto uniqueFuture = std::async(std::launch::deferred, func, std::forward<Args>(args)...);
             auto sharedFuture = uniqueFuture.share();
             cache.emplace_back([sharedFuture]() {sharedFuture.wait(); });
             add_task_cv.notify_one();
             return sharedFuture;
         }
-        template<class Fn, class... Args> auto add_task_delay(size_t delay_ms, Fn func, Args&&... args) {
+        template<class Fn, class... Args> std::shared_future<typename std::invoke_result<Fn, Args...>::type> add_task_delay(size_t delay_ms, Fn func, Args&&... args) {
             auto uniqueFuture = std::async(std::launch::deferred, func, std::forward<Args>(args)...);
             auto sharedFuture = uniqueFuture.share();
             cache.emplace_back([sharedFuture, delay_ms]() {std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms)); sharedFuture.wait(); });
@@ -123,7 +125,7 @@ namespace nysy {
         }
         void manage() {
             while (!stopped && adjust_enabled) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(manage_duration_ms));
+                std::this_thread::sleep_for(std::chrono::milliseconds(adjust_intervals));
                 if (stopped || !adjust_enabled)return;
                 std::unique_lock<std::mutex> locker{pool_lock};
                 while (!kill_ids.empty()) {
